@@ -128,6 +128,11 @@ def cleanup_filename(title):
     return title
 
 
+def first_letter(title):
+    """The upper case first letter of the title, or "#" if it starts with something other than a letter."""
+    return title[0].upper() if title and title[0].isalpha() else "#"
+
+
 def filename(path):
     """Removes the path."""
     return path.rsplit("/", 1)[-1]
@@ -569,7 +574,8 @@ class SortTV(object):
         self.checkforupdates = self.windowsnames = self.tvdbrename = self.lookupseasonep = "TRUE"
         self.extractrar = self.useseasondirs = self.displaylicense = self.useextensions = "TRUE"
         self.usedots = self.rename = self.seasondoubledigit = self.removesymlinks = "FALSE"
-        self.needshowexist = self.flattennonepisodefiles = self.tvdbrequired = self.sort_movie_dir = "FALSE"
+        self.needshowexist = self.flattennonepisodefiles = self.tvdbrequired = self.sort_movie_dir = \
+            self.movie_letter_dirs = "FALSE"
         self.dryrun = ""
         self.seasontitle = "Season "
         self.sortby = "MOVE"
@@ -662,6 +668,7 @@ class SortTV(object):
             ("tv-directory|directory-to-sort-into|tvdir", "s", self._opt_tv_directory),
             ("movie-directory|movie", "s", lambda v: self.set_directory(v, "moviedir")),
             ("sort-movie-directories|mdsort", "s", setter("sort_movie_dir")),
+            ("movie-first-letter-directories|mletter", "s", setter("movie_letter_dirs")),
             ("movie-language|mlang", "s", setter("movielanguage")),
             ("music-directory|music", "s", lambda v: self.set_directory(v, "musicdir")),
             ("music-extension|me", "s", appender(self.musicext)),
@@ -1082,10 +1089,12 @@ class SortTV(object):
                 r"(.*?)()(\.\w*$)",
                 r"(.*)()()",
             ]
+            # directories have no extension, so give the patterns an empty one to find
+            isdir = os.path.isdir(file)
             for pattern in patterns:
-                m = re.search(pattern, fname, re.I)
+                m = re.search(pattern, fname + "." if isdir else fname, re.I)
                 if m:
-                    title, year, ext = m.group(1), m.group(2), m.group(3)
+                    title, year, ext = m.group(1), m.group(2), "" if isdir else m.group(3)
                     title = re.sub(r"(?:" + MOVIE_TAGS_RE + r"|[\[\]{}()])", "", title, flags=re.I)
                     # at this point if it is not a known movie it is an "other"
                     if self.tmdb and self.match_and_sort_movie(title, year, ext, file):
@@ -1885,8 +1894,9 @@ class SortTV(object):
             location = self.movierenameformat
             # if we are sorting a directory, ignore directories in the rename format
             if os.path.isdir(file):
-                location = re.sub(r"/.*", "", location)
+                location = re.sub(r"/[^/]*$", "", location)
             location = re.sub(r"\[MOVIE_TITLE\]", lambda _m: title, location, flags=re.I)
+            location = re.sub(r"\[FIRST_LETTER\]", lambda _m: first_letter(title), location, flags=re.I)
             location = re.sub(r"\[RATING\]", lambda _m: mpaa_rating or "", location, flags=re.I)
             if year:
                 location = re.sub(r"\[YEAR1\]", lambda _m: "(%s)" % year, location, flags=re.I)
@@ -1907,6 +1917,8 @@ class SortTV(object):
             dest = filename(file)
         if self.usedots == "TRUE":
             dest = re.sub(r"\s", ".", dest)
+        if self.movie_letter_dirs == "TRUE":
+            dest = first_letter(title) + "/" + dest
         # set the destination, and create the directory if we need to
         if os.path.isdir(file):
             mdir = self.moviedir + dest + "/"
@@ -1924,7 +1936,7 @@ class SortTV(object):
                 posterfilename = mdir + "folder.jpg"
                 posterfilename_copy = mdir + "movie.tbn"
                 fanartfilename = mdir + "fanart.jpg"
-                if not (self.rename == "TRUE" and "/" in self.movierenameformat):
+                if not (self.rename == "TRUE" and self.movie_has_own_directory()):
                     posterfilename = mdir + filename_without_ext(dest) + ".jpg"
                     posterfilename_copy = mdir + filename_without_ext(dest) + ".tbn"
                     fanartfilename = mdir + filename_without_ext(dest) + "-fanart.jpg"
@@ -1949,6 +1961,11 @@ class SortTV(object):
                         self.out("warn", "WARN: Could not connect to xbmc webserver.\nRECOMMENDATION: If you do "
                                          "not use this feature you should disable it in the configuration file.\n")
                         self.xbmcoldwebserver = ""
+
+    def movie_has_own_directory(self):
+        """Whether the movie rename format puts each movie in its own directory (not just e.g. a letter one)."""
+        dirs = self.movierenameformat.rsplit("/", 1)
+        return len(dirs) == 2 and re.search(r"\[MOVIE_TITLE\]", dirs[0].rsplit("/", 1)[-1], re.I) is not None
 
     def get_rating(self, movie_id):
         """US MPAA rating (without hyphens, e.g. PG13), 'NR' if there is none. Only fetched when needed."""
@@ -2129,7 +2146,9 @@ OPTIONS:
 		[YEAR2]: "2011"
 		[QUALITY]: " HD" (or " SD") - extracted from original file name
 		[RATING]: "PG" - MPAA rating (US)
+		[FIRST_LETTER]: "M" - first letter of the title ("#" if it is not a letter)
 		/: A sub-directory (folder) - movies can be in their own directories
+		eg "[FIRST_LETTER]/[MOVIE_TITLE] [YEAR2]/[MOVIE_TITLE] [YEAR1]" -> "M/My Movie 2011/My Movie (2011)"
 	If not specified the format is, "[MOVIE_TITLE] [YEAR2]/[MOVIE_TITLE] [YEAR1]"
 
 --use-dots-instead-of-spaces=[TRUE|FALSE]
@@ -2196,6 +2215,11 @@ OPTIONS:
 
 --sort-movie-directories=[TRUE|FALSE]
 	Attempt to sort entire directories that represent a movie (the directory is sorted as is)
+	If not specified, FALSE
+
+--movie-first-letter-directories=[TRUE|FALSE]
+	Sort movies into a directory named after the first letter of the title ("#" if it is not a letter),
+	eg "M/My.Movie.2011.x264" (with or without renaming)
 	If not specified, FALSE
 
 --force-windows-compatible-filenames=[TRUE|FALSE]
