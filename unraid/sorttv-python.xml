@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>sorttv-python</Name>
+  <!-- Replace YOUR-GITHUB-USERNAME (lowercase) with your GitHub username -->
+  <Repository>ghcr.io/YOUR-GITHUB-USERNAME/sorttv-python:latest</Repository>
+  <Registry>https://github.com/YOUR-GITHUB-USERNAME/sorttv-python/pkgs/container/sorttv-python</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/YOUR-GITHUB-USERNAME/sorttv-python</Support>
+  <Project>https://github.com/YOUR-GITHUB-USERNAME/sorttv-python</Project>
+  <Overview>SortTV (Python port): sorts TV episodes, movies and music from a downloads folder into an organised library, once a day at SORTTV_RUN_AT. Edit /config/sorttv.conf after the first start.</Overview>
+  <Category>MediaApp:Video Tools:</Category>
+  <ExtraParams>--user 99:100</ExtraParams>
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/sorttv" Mode="rw" Description="sorttv.conf, sorttv.log and the lookup cache" Type="Path" Display="always" Required="true">/mnt/user/appdata/sorttv</Config>
+  <Config Name="Media" Target="/data" Default="/mnt/user/data" Mode="rw" Description="One share holding downloads, tv, movies etc. (sorttv.conf uses /data/downloads, /data/tv, ...)" Type="Path" Display="always" Required="true">/mnt/user/data</Config>
+  <Config Name="Run time" Target="SORTTV_RUN_AT" Default="03:00" Mode="" Description="Sort once a day at this time (24-hour HH:MM). Leave empty to run once and stop." Type="Variable" Display="always" Required="false">03:00</Config>
+  <Config Name="Time zone" Target="TZ" Default="America/Edmonton" Mode="" Description="Time zone for the run time" Type="Variable" Display="always" Required="false">America/Edmonton</Config>
+  <Config Name="TheTVDB API key" Target="TVDB_API_KEY" Default="" Mode="" Description="Optional here: can be set in sorttv.conf instead" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="TMDb API key" Target="TMDB_API_KEY" Default="" Mode="" Description="Optional here: can be set in sorttv.conf instead" Type="Variable" Display="always" Required="false" Mask="true"/>
+</Container>

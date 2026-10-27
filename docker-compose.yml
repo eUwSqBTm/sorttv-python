@@ -1,0 +1,28 @@
+services:
+  sorttv:
+    build: .
+    image: sorttv
+    container_name: sorttv
+    # Run as your own user so sorted files are owned by you (check with `id` on the host)
+    user: "1000:1000"
+    environment:
+      - TZ=America/Edmonton
+      # Sort once a day at this local time (24-hour HH:MM)
+      - SORTTV_RUN_AT=03:00
+      # Optional: API keys here instead of in sorttv.conf
+      # - TVDB_API_KEY=your-tvdb-key
+      # - TMDB_API_KEY=your-tmdb-key
+    volumes:
+      # sorttv.conf, sorttv.log and the lookup cache
+      - ./config:/config
+      # One parent folder holding downloads, TV, movies etc. Mounting a single parent keeps
+      # moves fast (rename instead of copy) and lets PLACE-HARDLINK work.
+      # Inside the container the sample config expects:
+      #   /data/downloads  /data/tv  /data/movies  /data/music  /data/other
+      - /srv/media:/data
+    # Options passed to each run (don't add --poll-time here: the schedule handles timing)
+    command: ["--display-license=FALSE"]
+    restart: unless-stopped
+    # Lets `xbmc-remote-control=host.docker.internal` reach Kodi running on the host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
