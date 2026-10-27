@@ -128,6 +128,11 @@ def cleanup_filename(title):
     return title
 
 
+def first_letter(title):
+    """The upper case first letter of the title, or "#" if it starts with something other than a letter."""
+    return title[0].upper() if title and title[0].isalpha() else "#"
+
+
 def filename(path):
     """Removes the path."""
     return path.rsplit("/", 1)[-1]
@@ -1885,8 +1890,9 @@ class SortTV(object):
             location = self.movierenameformat
             # if we are sorting a directory, ignore directories in the rename format
             if os.path.isdir(file):
-                location = re.sub(r"/.*", "", location)
+                location = re.sub(r"/[^/]*$", "", location)
             location = re.sub(r"\[MOVIE_TITLE\]", lambda _m: title, location, flags=re.I)
+            location = re.sub(r"\[FIRST_LETTER\]", lambda _m: first_letter(title), location, flags=re.I)
             location = re.sub(r"\[RATING\]", lambda _m: mpaa_rating or "", location, flags=re.I)
             if year:
                 location = re.sub(r"\[YEAR1\]", lambda _m: "(%s)" % year, location, flags=re.I)
@@ -1924,7 +1930,7 @@ class SortTV(object):
                 posterfilename = mdir + "folder.jpg"
                 posterfilename_copy = mdir + "movie.tbn"
                 fanartfilename = mdir + "fanart.jpg"
-                if not (self.rename == "TRUE" and "/" in self.movierenameformat):
+                if not (self.rename == "TRUE" and self.movie_has_own_directory()):
                     posterfilename = mdir + filename_without_ext(dest) + ".jpg"
                     posterfilename_copy = mdir + filename_without_ext(dest) + ".tbn"
                     fanartfilename = mdir + filename_without_ext(dest) + "-fanart.jpg"
@@ -1949,6 +1955,11 @@ class SortTV(object):
                         self.out("warn", "WARN: Could not connect to xbmc webserver.\nRECOMMENDATION: If you do "
                                          "not use this feature you should disable it in the configuration file.\n")
                         self.xbmcoldwebserver = ""
+
+    def movie_has_own_directory(self):
+        """Whether the movie rename format puts each movie in its own directory (not just e.g. a letter one)."""
+        dirs = self.movierenameformat.rsplit("/", 1)
+        return len(dirs) == 2 and re.search(r"\[MOVIE_TITLE\]", dirs[0].rsplit("/", 1)[-1], re.I) is not None
 
     def get_rating(self, movie_id):
         """US MPAA rating (without hyphens, e.g. PG13), 'NR' if there is none. Only fetched when needed."""
@@ -2129,7 +2140,9 @@ OPTIONS:
 		[YEAR2]: "2011"
 		[QUALITY]: " HD" (or " SD") - extracted from original file name
 		[RATING]: "PG" - MPAA rating (US)
+		[FIRST_LETTER]: "M" - first letter of the title ("#" if it is not a letter)
 		/: A sub-directory (folder) - movies can be in their own directories
+		eg "[FIRST_LETTER]/[MOVIE_TITLE] [YEAR2]/[MOVIE_TITLE] [YEAR1]" -> "M/My Movie 2011/My Movie (2011)"
 	If not specified the format is, "[MOVIE_TITLE] [YEAR2]/[MOVIE_TITLE] [YEAR1]"
 
 --use-dots-instead-of-spaces=[TRUE|FALSE]

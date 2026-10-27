@@ -400,6 +400,23 @@ class SortTVTest(unittest.TestCase):
                     "RiP!- A Remix Manifesto 2009-fanart.jpg"):
             self.assertExists("Movies/" + img)
 
+    def test_movie_first_letter_directory(self):
+        self.sort(["RIP: A Remix Manifesto.avi"], "--rename-media=TRUE", "--fetch-movie-images=TRUE",
+                  "--rename-movie-format=[FIRST_LETTER]/[MOVIE_TITLE] [YEAR2]/[MOVIE_TITLE] [YEAR1]")
+        self.assertExists("Movies/R/RiP!- A Remix Manifesto 2009/RiP!- A Remix Manifesto (2009).avi")
+        self.assertExists("Movies/R/RiP!- A Remix Manifesto 2009/folder.jpg")
+        self.sort(["Night of the Living Dead 1968.avi"], "--rename-media=TRUE", "--fetch-movie-images=TRUE",
+                  "--rename-movie-format=[FIRST_LETTER]/[MOVIE_TITLE] [YEAR1]")
+        self.assertExists("Movies/N/Night of the Living Dead (1968).avi")
+        self.assertExists("Movies/N/Night of the Living Dead (1968).jpg")
+        self.assertNotExists("Movies/N/folder.jpg")
+
+    def test_movie_directory_first_letter(self):
+        self.sort(["RIP: A Remix Manifesto/test.avi"], "--treat-directories=AS_FILES_TO_SORT", "--rename-media=TRUE",
+                  "--fetch-movie-images=FALSE",
+                  "--rename-movie-format=[FIRST_LETTER]/[MOVIE_TITLE] [YEAR2]/[MOVIE_TITLE] [YEAR1]")
+        self.assertExists("Movies/R/RiP!- A Remix Manifesto 2009/test.avi")
+
     def test_movie_directory(self):
         self.sort(["RIP: A Remix Manifesto/test.avi"], "--treat-directories=AS_FILES_TO_SORT", "--rename-media=TRUE",
                   "--fetch-movie-images=FALSE", *self.MOVIE_RENAME)
