@@ -574,7 +574,8 @@ class SortTV(object):
         self.checkforupdates = self.windowsnames = self.tvdbrename = self.lookupseasonep = "TRUE"
         self.extractrar = self.useseasondirs = self.displaylicense = self.useextensions = "TRUE"
         self.usedots = self.rename = self.seasondoubledigit = self.removesymlinks = "FALSE"
-        self.needshowexist = self.flattennonepisodefiles = self.tvdbrequired = self.sort_movie_dir = "FALSE"
+        self.needshowexist = self.flattennonepisodefiles = self.tvdbrequired = self.sort_movie_dir = \
+            self.movie_letter_dirs = "FALSE"
         self.dryrun = ""
         self.seasontitle = "Season "
         self.sortby = "MOVE"
@@ -667,6 +668,7 @@ class SortTV(object):
             ("tv-directory|directory-to-sort-into|tvdir", "s", self._opt_tv_directory),
             ("movie-directory|movie", "s", lambda v: self.set_directory(v, "moviedir")),
             ("sort-movie-directories|mdsort", "s", setter("sort_movie_dir")),
+            ("movie-first-letter-directories|mletter", "s", setter("movie_letter_dirs")),
             ("movie-language|mlang", "s", setter("movielanguage")),
             ("music-directory|music", "s", lambda v: self.set_directory(v, "musicdir")),
             ("music-extension|me", "s", appender(self.musicext)),
@@ -1087,10 +1089,12 @@ class SortTV(object):
                 r"(.*?)()(\.\w*$)",
                 r"(.*)()()",
             ]
+            # directories have no extension, so give the patterns an empty one to find
+            isdir = os.path.isdir(file)
             for pattern in patterns:
-                m = re.search(pattern, fname, re.I)
+                m = re.search(pattern, fname + "." if isdir else fname, re.I)
                 if m:
-                    title, year, ext = m.group(1), m.group(2), m.group(3)
+                    title, year, ext = m.group(1), m.group(2), "" if isdir else m.group(3)
                     title = re.sub(r"(?:" + MOVIE_TAGS_RE + r"|[\[\]{}()])", "", title, flags=re.I)
                     # at this point if it is not a known movie it is an "other"
                     if self.tmdb and self.match_and_sort_movie(title, year, ext, file):
@@ -1913,6 +1917,8 @@ class SortTV(object):
             dest = filename(file)
         if self.usedots == "TRUE":
             dest = re.sub(r"\s", ".", dest)
+        if self.movie_letter_dirs == "TRUE":
+            dest = first_letter(title) + "/" + dest
         # set the destination, and create the directory if we need to
         if os.path.isdir(file):
             mdir = self.moviedir + dest + "/"
@@ -2209,6 +2215,11 @@ OPTIONS:
 
 --sort-movie-directories=[TRUE|FALSE]
 	Attempt to sort entire directories that represent a movie (the directory is sorted as is)
+	If not specified, FALSE
+
+--movie-first-letter-directories=[TRUE|FALSE]
+	Sort movies into a directory named after the first letter of the title ("#" if it is not a letter),
+	eg "M/My.Movie.2011.x264" (with or without renaming)
 	If not specified, FALSE
 
 --force-windows-compatible-filenames=[TRUE|FALSE]

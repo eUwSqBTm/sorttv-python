@@ -417,6 +417,15 @@ class SortTVTest(unittest.TestCase):
                   "--rename-movie-format=[FIRST_LETTER]/[MOVIE_TITLE] [YEAR2]/[MOVIE_TITLE] [YEAR1]")
         self.assertExists("Movies/R/RiP!- A Remix Manifesto 2009/test.avi")
 
+    def test_movie_first_letter_without_renaming(self):
+        self.sort(["RIP.A.Remix.Manifesto.2009.1080p.BluRay.x264-GRP/test.avi",
+                   "Night of the Living Dead (1968)/test.avi", "Night of the Living Dead 1968 DVD.avi"],
+                  "--sort-movie-directories=TRUE", "--movie-first-letter-directories=TRUE", "--rename-media=FALSE",
+                  "--fetch-movie-images=FALSE")
+        self.assertExists("Movies/R/RIP.A.Remix.Manifesto.2009.1080p.BluRay.x264-GRP/test.avi")
+        self.assertExists("Movies/N/Night of the Living Dead (1968)/test.avi")
+        self.assertExists("Movies/N/Night of the Living Dead 1968 DVD.avi")
+
     def test_movie_directory(self):
         self.sort(["RIP: A Remix Manifesto/test.avi"], "--treat-directories=AS_FILES_TO_SORT", "--rename-media=TRUE",
                   "--fetch-movie-images=FALSE", *self.MOVIE_RENAME)
