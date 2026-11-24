@@ -30,6 +30,7 @@ SERIES = {
     154521: {"name": "Pioneer One", "episodes": [(1, 1, "Earthfall", "2010-06-16"),
                                                  (1, 2, "The Man From Mars", "2010-12-12"),
                                                  (1, 3, "Triangular Diplomacy", "2011-01-18")]},
+    442478: {"name": "Matlock (2024)", "episodes": [(1, 1, "Pilot", "2024-09-22")]},
 }
 MOVIES = [
     {"id": 1, "title": "RiP!: A Remix Manifesto", "original_title": "RiP!: A Remix Manifesto",
@@ -399,6 +400,27 @@ class SortTVTest(unittest.TestCase):
         for img in ("RiP!- A Remix Manifesto 2009.tbn", "RiP!- A Remix Manifesto 2009.jpg",
                     "RiP!- A Remix Manifesto 2009-fanart.jpg"):
             self.assertExists("Movies/" + img)
+
+    def test_show_year_brackets(self):
+        ep = "Matlock.S01E01.720p.WEB.h264-GRP.mkv"
+        self.sort([ep], "--fetch-tv-images=FALSE")
+        self.assertExists("TV/Matlock (2024)/Season 1/" + ep)
+        shutil.rmtree(self.p("TV"))
+        os.makedirs(self.p("TV"))
+        self.sort([ep], "--fetch-tv-images=FALSE", "--remove-show-year-brackets=TRUE")
+        self.assertExists("TV/Matlock 2024/Season 1/" + ep)
+        shutil.rmtree(self.p("TV"))
+        os.makedirs(self.p("TV"))
+        self.sort([ep], "--fetch-tv-images=FALSE", "--remove-show-year-brackets=TRUE",
+                  "--use-dots-instead-of-spaces=TRUE", "--rename-media=TRUE")
+        self.assertExists("TV/Matlock.2024/Season.1/Matlock.2024.-.S01E01.-.Pilot.mkv")
+
+    def test_show_year_brackets_existing_dir(self):
+        # an existing "Show (2026)" folder is still used, rather than making a second "Show 2026" one
+        os.makedirs(self.p("TV/Matlock (2024)"))
+        self.sort(["Matlock.S01E01.mkv"], "--fetch-tv-images=FALSE", "--remove-show-year-brackets=TRUE")
+        self.assertExists("TV/Matlock (2024)/Season 1/Matlock.S01E01.mkv")
+        self.assertNotExists("TV/Matlock 2024")
 
     def test_movie_first_letter_directory(self):
         self.sort(["RIP: A Remix Manifesto.avi"], "--rename-media=TRUE", "--fetch-movie-images=TRUE",
