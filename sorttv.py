@@ -575,7 +575,7 @@ class SortTV(object):
         self.extractrar = self.useseasondirs = self.displaylicense = self.useextensions = "TRUE"
         self.usedots = self.rename = self.seasondoubledigit = self.removesymlinks = "FALSE"
         self.needshowexist = self.flattennonepisodefiles = self.tvdbrequired = self.sort_movie_dir = \
-            self.movie_letter_dirs = "FALSE"
+            self.movie_letter_dirs = self.showyearnobrackets = "FALSE"
         self.dryrun = ""
         self.seasontitle = "Season "
         self.sortby = "MOVE"
@@ -650,6 +650,7 @@ class SortTV(object):
             ("rename-movie-format|rf", "s", setter("movierenameformat")),
             ("remove-symlinks|rs", "s", setter("removesymlinks")),
             ("use-dots-instead-of-spaces|dots", "s", setter("usedots")),
+            ("remove-show-year-brackets|yearnobrackets", "s", setter("showyearnobrackets")),
             ("sort-by|by", "s", setter("sortby")),
             ("sort-only-older-than-days|age", "i", setter("sortolderthandays")),
             ("year-tolerance-for-error|yerr", "i", setter("yeartoleranceforerror")),
@@ -1308,6 +1309,12 @@ class SortTV(object):
                 self.out("verbose", "INFO: thetvdb lookup failed for %s: %s\n" % (filetitle, e))
         return filetitle
 
+    def show_dir_name(self, name):
+        """The show name as used for folders and [SHOW_NAME]: "Show (2026)" -> "Show 2026" if configured."""
+        if self.showyearnobrackets == "TRUE":
+            name = re.sub(r"\s*[(\[]((?:19|20)\d{2})[)\]]", r" \1", name).strip()
+        return name
+
     def escape_myfilename(self, name):
         """Converts to filesystem friendly names."""
         if IS_WINDOWS or self.windowsnames == "TRUE":
@@ -1474,7 +1481,7 @@ class SortTV(object):
             return self.dir_matching_show_name(tvdir, pureshowname, showname, "")
         if self.needshowexist != "TRUE":
             # we couldn't find a matching show, make DIR
-            newshow = self.escape_myfilename(self.resolve_show_name(pureshowname))
+            newshow = self.escape_myfilename(self.show_dir_name(self.resolve_show_name(pureshowname)))
             if self.usedots == "TRUE":
                 newshow = re.sub(r"\s", ".", newshow)
             newshowdir = tvdir + newshow
@@ -1527,7 +1534,7 @@ class SortTV(object):
                 return True
         else:
             self.out("verbose", "SKIP: Show directory does not exist: %s%s\n"
-                     % (self.tvdir, self.escape_myfilename(self.resolve_show_name(pureshowname))))
+                     % (self.tvdir, self.escape_myfilename(self.show_dir_name(self.resolve_show_name(pureshowname)))))
         return False
 
     # -- images ---------------------------------------------------------------
@@ -1660,7 +1667,7 @@ class SortTV(object):
                 else:
                     self.out("warn", "WARN: Could not get episode title for %s Season %s Episode %s.\n"
                              % (sname, series, episode))
-            sname = self.resolve_show_name(self.pureshowname)
+            sname = self.show_dir_name(self.resolve_show_name(self.pureshowname))
             values = [
                 (r"\[SHOW_NAME\]", sname),
                 (r"\[EP1\]", ep1),
@@ -2153,6 +2160,11 @@ OPTIONS:
 
 --use-dots-instead-of-spaces=[TRUE|FALSE]
 	Renames episodes to replace spaces with dots
+	If not specified, FALSE
+
+--remove-show-year-brackets=[TRUE|FALSE]
+	Writes the year in show names without brackets, for show folders and [SHOW_NAME]
+	eg "Show (2026)" -> "Show 2026" (or "Show.2026" with use-dots-instead-of-spaces)
 	If not specified, FALSE
 
 --use-season-directories=[TRUE|FALSE]
